@@ -1,0 +1,79 @@
+# Maven
+# Build your Java project and run tests with Apache Maven.
+# Add steps that analyze code, save build artifacts, deploy, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/java
+
+trigger:
+- master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+steps:
+#Setup Sonarqube
+- task: SonarCloudPrepare@1
+  displayName: SonarCloud-Preparation
+  inputs:
+    SonarCloud: 'SONAR_ENDPOINT'
+    organization: 'anoop600-github'
+    scannerMode: Other
+
+#MAVEN BUILD AND SONARQUBE ANALYSIS
+- task: Maven@2
+  displayName: Maven Build Stage
+  inputs:
+    mavenPomFile: 'pom.xml'
+    options: '-Dmaven.test.failure.ignore=true'
+    codeCoverageToolOption: JaCoCo
+    sonarQubeRunAnalysis: true
+
+#PUBLISH SONARQUBE ANALYSIS RESULT
+- task: SonarCloudPublish@1
+  displayName: 'Publish Quality Gate Result'
+  
+#COPY WAR FROM TARGET
+- task: CopyFiles@2
+  inputs:
+    SourceFolder: '/home/vsts/work/1/s/target/'
+    Contents: 'crm.war'
+    TargetFolder: '$(Build.ArtifactStagingDirectory)'
+  displayName: Copy war from target to Staging Directory
+
+#PUBLISH ARTIFACTS
+- task: PublishBuildArtifacts@1
+  inputs:
+    PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+    publishLocation: Container
+  displayName: PublishBuildArtifacts to Artifactory
+
+
+- bash: |
+   ip=$(curl -s http://ipinfo.io/json | jq '.ip')
+   echo "##vso[task.setvariable variable=ado_host_ip;]$ip" 
+   
+   
+  displayName: 'Bash Script'
+
+- bash: 'echo $(ado_host_ip) '
+  displayName: 'Bash Script'
+
+# - task: AzureCLI@1
+#   inputs:
+#     azureSubscription: 'Visual Studio Enterprise (b9caa756-30bd-4498-a712-d906a53cc2a2)'
+#     scriptLocation: inlineScript
+#     inlineScript: 'az acr network-rule add -n ANOOP --ip-address $(ado_host_ip) '
+#   displayName: 'Azure CLI '
+
+# - task: Docker@1
+#   displayName: build
+#   inputs:
+#     azureSubscriptionEndpoint: 'Visual Studio Enterprise (b9caa756-30bd-4498-a712-d906a53cc2a2)'
+#     azureContainerRegistry: anoop.azurecr.io
+#     dockerFile: Dockerfile
+
+# - task: Docker@1
+#   displayName: Push
+#   inputs:
+#     azureSubscriptionEndpoint: 'Visual Studio Enterprise (b9caa756-30bd-4498-a712-d906a53cc2a2)'
+#     azureContainerRegistry: anoop.azurecr.io
+#     command: Push an image
