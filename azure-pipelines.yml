@@ -23,7 +23,7 @@ steps:
   displayName: Maven Build Stage
   inputs:
     mavenPomFile: 'pom.xml'
-    options: '-Dmaven.test.failure.ignore=true'
+    # options: '-Dmaven.test.failure.ignore=true'
     codeCoverageToolOption: JaCoCo
     sonarQubeRunAnalysis: true
 
